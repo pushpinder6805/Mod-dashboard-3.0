@@ -12,6 +12,7 @@ enabled_site_setting :mash_review_dashboard_enabled
 register_asset "stylesheets/common/mash-review-dashboard.scss"
 
 module ::MashReviewDashboard
+  DISCOURSE_PLUGIN_NAME = "Mod-dashboard-3.0"
   PLUGIN_NAME = "mash-review-dashboard"
 end
 

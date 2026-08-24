@@ -2,7 +2,7 @@
 
 module ::MashReviewDashboard
   class BaseController < ::ApplicationController
-    requires_plugin PLUGIN_NAME
+    requires_plugin DISCOURSE_PLUGIN_NAME
 
     before_action :ensure_logged_in
     before_action :ensure_plugin_enabled
