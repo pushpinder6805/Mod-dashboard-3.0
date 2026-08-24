@@ -37,6 +37,17 @@ describe MashReviewDashboard::ItemsController do
         response.parsed_body["items"].map { |item| item["id"] }
       ).to contain_exactly(topic_item.id, reply_item.id)
       expect(response.parsed_body.dig("counts", "pending")).to eq(2)
+      expect(response.parsed_body.dig("counts", "pending_topics")).to eq(1)
+      expect(response.parsed_body.dig("counts", "pending_posts")).to eq(1)
+
+      get "/mash-review-dashboard/items.json",
+          params: {
+            status: "pending",
+            target_type: "topic"
+          }
+
+      expect(response.parsed_body["items"].pluck("id")).to eq([topic_item.id])
+      expect(response.parsed_body.dig("counts", "pending_posts")).to eq(1)
     end
   end
 

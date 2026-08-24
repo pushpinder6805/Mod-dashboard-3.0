@@ -5,9 +5,9 @@ module ::MashReviewDashboard
     def index
       page = [params.fetch(:page, 1).to_i, 1].max
       per_page = SiteSetting.mash_review_items_per_page
-      unfiltered_status_scope =
-        filtered_scope(ReviewItem.in_queue, include_status: false)
-      scope = unfiltered_status_scope
+      summary_scope =
+        filtered_scope(ReviewItem.in_queue, include_target_type: false)
+      scope = filtered_scope(ReviewItem.in_queue, include_target_type: true)
       if ReviewItem.statuses.key?(params[:status].to_s)
         scope = scope.where(status: params[:status])
       end
@@ -27,7 +27,7 @@ module ::MashReviewDashboard
 
       render json: {
                items: items.map { |item| ItemPresenter.call(item) },
-               counts: status_counts(unfiltered_status_scope),
+               counts: status_counts(summary_scope),
                pagination: {
                  page: page,
                  per_page: per_page,
@@ -114,14 +114,12 @@ module ::MashReviewDashboard
 
     private
 
-    def filtered_scope(scope, include_status:)
+    def filtered_scope(scope, include_target_type:)
       scope = visible_to_staff(scope)
-      scope = scope.where(status: params[:status]) if include_status &&
-        ReviewItem.statuses.key?(params[:status].to_s)
       scope =
         scope.where(
           target_type: normalized_target_type
-        ) if normalized_target_type.present?
+        ) if include_target_type && normalized_target_type.present?
       scope = scope.where(assigned_to_id: params[:assigned_to_id]) if params[
         :assigned_to_id
       ].present?
@@ -210,13 +208,21 @@ module ::MashReviewDashboard
     end
 
     def status_counts(scope)
-      grouped = scope.group(:status).count
+      grouped = scope.group(:target_type, :status).count
       {
         all: grouped.values.sum,
-        pending: grouped.fetch("pending", 0),
-        in_review: grouped.fetch("in_review", 0),
-        reviewed: grouped.fetch("reviewed", 0)
+        pending: count_status(grouped, "pending"),
+        pending_topics: grouped.fetch(%w[Topic pending], 0),
+        pending_posts: grouped.fetch(%w[Post pending], 0),
+        in_review: count_status(grouped, "in_review"),
+        reviewed: count_status(grouped, "reviewed")
       }
+    end
+
+    def count_status(grouped, status)
+      grouped.sum do |(_target_type, grouped_status), count|
+        grouped_status == status ? count : 0
+      end
     end
 
     def staff_users

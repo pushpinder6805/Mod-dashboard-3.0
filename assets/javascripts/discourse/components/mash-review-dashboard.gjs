@@ -15,8 +15,15 @@ export default class MashReviewDashboard extends Component {
   @service dialog;
 
   @tracked items = [];
-  @tracked counts = { all: 0, pending: 0, in_review: 0, reviewed: 0 };
-  @tracked staff = [];
+  @tracked
+  counts = {
+    all: 0,
+    pending: 0,
+    pending_topics: 0,
+    pending_posts: 0,
+    in_review: 0,
+    reviewed: 0,
+  };
   @tracked categories = [];
   @tracked migration = { status: "not_started" };
   @tracked migrationPreview;
@@ -24,8 +31,7 @@ export default class MashReviewDashboard extends Component {
   @tracked saving = false;
   @tracked error;
   @tracked status = "pending";
-  @tracked targetType = "";
-  @tracked moderatorId = "";
+  @tracked targetType = "topic";
   @tracked categoryId = "";
   @tracked author = "";
   @tracked dateFrom = "";
@@ -55,13 +61,52 @@ export default class MashReviewDashboard extends Component {
     }
   }
 
-  get statusTabs() {
+  get summaryCards() {
     return [
-      { key: "pending", label: "Pending", count: this.counts.pending },
-      { key: "in_review", label: "In review", count: this.counts.in_review },
-      { key: "reviewed", label: "Reviewed", count: this.counts.reviewed },
-      { key: "all", label: "All", count: this.counts.all },
-    ].map((tab) => ({ ...tab, active: this.status === tab.key }));
+      {
+        key: "pending-topics",
+        label: "Pending Topics",
+        description: "Topics waiting for review",
+        count: this.counts.pending_topics,
+        status: "pending",
+        targetType: "topic",
+      },
+      {
+        key: "pending-posts",
+        label: "Pending Posts / Replies",
+        description: "Replies waiting for review",
+        count: this.counts.pending_posts,
+        status: "pending",
+        targetType: "post",
+      },
+      {
+        key: "in-review",
+        label: "In Review",
+        description: "Currently being checked",
+        count: this.counts.in_review,
+        status: "in_review",
+        targetType: "",
+      },
+      {
+        key: "reviewed",
+        label: "Reviewed",
+        description: "Completed permanent reviews",
+        count: this.counts.reviewed,
+        status: "reviewed",
+        targetType: "",
+      },
+    ].map((card) => ({
+      ...card,
+      active:
+        this.status === card.status && this.targetType === card.targetType,
+    }));
+  }
+
+  get currentViewLabel() {
+    return (
+      this.summaryCards.find((card) => card.active)?.label ||
+      "Filtered review items"
+    );
   }
 
   get migrationNeedsAttention() {
@@ -93,9 +138,6 @@ export default class MashReviewDashboard extends Component {
     if (this.targetType) {
       query.set("target_type", this.targetType);
     }
-    if (this.moderatorId) {
-      query.set("moderator_id", this.moderatorId);
-    }
     if (this.categoryId) {
       query.set("category_id", this.categoryId);
     }
@@ -121,7 +163,6 @@ export default class MashReviewDashboard extends Component {
       const result = await ajax(`${BASE_URL}/items?${this.buildQuery()}`);
       this.items = result.items;
       this.counts = result.counts;
-      this.staff = result.staff;
       this.categories = result.categories;
       this.pagination = result.pagination;
       this.migration = result.migration || { status: "not_started" };
@@ -144,8 +185,9 @@ export default class MashReviewDashboard extends Component {
   }
 
   @action
-  selectStatus(status) {
-    this.status = status;
+  selectSummary(card) {
+    this.status = card.status;
+    this.targetType = card.targetType;
     this.page = 1;
     this.details = null;
     this.load();
@@ -154,11 +196,6 @@ export default class MashReviewDashboard extends Component {
   @action
   updateTargetType(event) {
     this.targetType = event.target.value;
-  }
-
-  @action
-  updateModerator(event) {
-    this.moderatorId = event.target.value;
   }
 
   @action
@@ -191,8 +228,6 @@ export default class MashReviewDashboard extends Component {
 
   @action
   clearFilters() {
-    this.targetType = "";
-    this.moderatorId = "";
     this.categoryId = "";
     this.author = "";
     this.dateFrom = "";
@@ -213,27 +248,6 @@ export default class MashReviewDashboard extends Component {
       if (this.details?.item?.id === item.id) {
         await this.openDetails(item);
       }
-    } catch (error) {
-      popupAjaxError(error);
-    } finally {
-      this.saving = false;
-    }
-  }
-
-  @action
-  async changeAssignment(item, event) {
-    const assignedToId = event.target.value;
-    if (!assignedToId && !item.assigned_to) {
-      return;
-    }
-
-    this.saving = true;
-    try {
-      await ajax(`${BASE_URL}/items/${item.id}/assignment`, {
-        type: "PUT",
-        data: { assigned_to_id: assignedToId },
-      });
-      await this.load();
     } catch (error) {
       popupAjaxError(error);
     } finally {
@@ -435,12 +449,21 @@ export default class MashReviewDashboard extends Component {
     return event.action.replaceAll("_", " ");
   }
 
+  statusLabel(status) {
+    return status.replaceAll("_", " ");
+  }
+
+  contentTypeLabel(targetType) {
+    return targetType === "Post" ? "Post / Reply" : "Topic";
+  }
+
   <template>
     <section class="mash-review-dashboard" aria-label="MASH Review Dashboard">
       <header class="mash-review-dashboard__header">
         <div>
-          <h2>MASH Review Dashboard</h2>
-          <p>Permanent staff review records for every topic and reply.</p>
+          <span class="mash-review-dashboard__eyebrow">Moderator workspace</span>
+          <h2>Review activity</h2>
+          <p>Review topics and replies with permanent, shared staff records.</p>
         </div>
         <button
           type="button"
@@ -454,17 +477,22 @@ export default class MashReviewDashboard extends Component {
 
       {{#if this.migrationNeedsAttention}}
         <div class="mash-review-dashboard__migration">
-          <div>
-            <strong>One-time backend migration required</strong>
+          <div class="mash-review-dashboard__migration-copy">
+            <span class="mash-review-dashboard__setup-label">Initial setup</span>
+            <strong>Bring your existing reviews into this dashboard</strong>
             {{#if this.migrationPreview}}
               <p>
                 {{this.migrationPreview.reviewed_topics}}
-                reviewed-tag topics and
+                reviewed topics and
                 {{this.migrationPreview.reviewed_replies_to_inherit}}
-                existing replies will retain Reviewed status.
+                replies will keep their Reviewed status. This does not delete or
+                modify posts.
               </p>
             {{else}}
-              <p>Create permanent records for the existing dashboard content.</p>
+              <p>
+                Run this once after installation to create permanent records for
+                existing dashboard content.
+              </p>
             {{/if}}
           </div>
           <button
@@ -473,7 +501,7 @@ export default class MashReviewDashboard extends Component {
             disabled={{this.saving}}
             {{on "click" this.startBackfill}}
           >
-            Start migration
+            Migrate existing reviews
           </button>
         </div>
       {{else if this.migrationRunning}}
@@ -503,15 +531,20 @@ export default class MashReviewDashboard extends Component {
         </div>
       {{/if}}
 
-      <nav class="mash-review-dashboard__tabs" aria-label="Review status">
-        {{#each this.statusTabs as |tab|}}
+      <nav class="mash-review-dashboard__summary" aria-label="Review queues">
+        {{#each this.summaryCards as |card|}}
           <button
             type="button"
-            class="mash-review-dashboard__tab {{if tab.active 'is-active'}}"
-            {{on "click" (fn this.selectStatus tab.key)}}
+            class="mash-review-summary-card mash-review-summary-card--{{card.key}}
+              {{if card.active 'is-active'}}"
+            aria-pressed={{card.active}}
+            {{on "click" (fn this.selectSummary card)}}
           >
-            {{tab.label}}
-            <span>{{tab.count}}</span>
+            <span class="mash-review-summary-card__label">{{card.label}}</span>
+            <strong>{{card.count}}</strong>
+            <span
+              class="mash-review-summary-card__description"
+            >{{card.description}}</span>
           </button>
         {{/each}}
       </nav>
@@ -520,6 +553,10 @@ export default class MashReviewDashboard extends Component {
         class="mash-review-dashboard__filters"
         {{on "submit" this.applyFilters}}
       >
+        <div class="mash-review-dashboard__filters-heading">
+          <strong>Filter this queue</strong>
+          <span>Narrow results without changing review records.</span>
+        </div>
         <label>
           Content
           <select
@@ -529,18 +566,6 @@ export default class MashReviewDashboard extends Component {
             <option value="">Topics and replies</option>
             <option value="topic">Topics</option>
             <option value="post">Replies</option>
-          </select>
-        </label>
-        <label>
-          Moderator
-          <select
-            value={{this.moderatorId}}
-            {{on "change" this.updateModerator}}
-          >
-            <option value="">Any moderator</option>
-            {{#each this.staff as |moderator|}}
-              <option value={{moderator.id}}>{{moderator.username}}</option>
-            {{/each}}
           </select>
         </label>
         <label>
@@ -594,14 +619,21 @@ export default class MashReviewDashboard extends Component {
       {{#if this.loading}}
         <div class="mash-review-dashboard__empty">Loading review items…</div>
       {{else if this.items.length}}
+        <div class="mash-review-dashboard__results-heading">
+          <div>
+            <span>Review queue</span>
+            <h3>{{this.currentViewLabel}}</h3>
+          </div>
+          <strong>{{this.pagination.total}} results</strong>
+        </div>
         <div class="mash-review-dashboard__list">
           {{#each this.items as |item|}}
             <article class="mash-review-item mash-review-item--{{item.status}}">
               <div class="mash-review-item__content">
                 <div class="mash-review-item__eyebrow">
-                  <span
-                    class="mash-review-item__type"
-                  >{{item.target_type}}</span>
+                  <span class="mash-review-item__type">{{this.contentTypeLabel
+                      item.target_type
+                    }}</span>
                   {{#if item.category}}<span
                     >{{item.category.name}}</span>{{/if}}
                   <span>{{this.formatDate item.content_created_at}}</span>
@@ -616,8 +648,8 @@ export default class MashReviewDashboard extends Component {
                 {{#if item.excerpt}}<p>{{item.excerpt}}</p>{{/if}}
                 <div class="mash-review-item__meta">
                   <span>By @{{item.author.username}}</span>
-                  <span>Status: <strong>{{item.status}}</strong></span>
-                  {{#if item.assigned_to}}<span>Assigned to @{{item.assigned_to.username}}</span>{{/if}}
+                  <span>Status:
+                    <strong>{{this.statusLabel item.status}}</strong></span>
                   {{#if item.reviewed_by}}<span>Reviewed by @{{item.reviewed_by.username}}</span>{{/if}}
                 </div>
               </div>
@@ -652,27 +684,9 @@ export default class MashReviewDashboard extends Component {
                     Mark reviewed
                   </button>
                 {{/if}}
-                <label class="mash-review-item__assignment">
-                  <span>Assign</span>
-                  <select
-                    disabled={{this.saving}}
-                    {{on "change" (fn this.changeAssignment item)}}
-                  >
-                    <option value="">{{if
-                        item.assigned_to
-                        "Unassign"
-                        "Choose moderator"
-                      }}</option>
-                    {{#each this.staff as |moderator|}}
-                      <option
-                        value={{moderator.id}}
-                      >{{moderator.username}}</option>
-                    {{/each}}
-                  </select>
-                </label>
                 <button
                   type="button"
-                  class="btn btn-default"
+                  class="btn btn-default mash-review-item__details-button"
                   {{on "click" (fn this.openDetails item)}}
                 >
                   Notes & history ({{item.notes_count}})
