@@ -26,7 +26,10 @@ module ::MashReviewDashboard
           .limit(per_page)
 
       render json: {
-               items: items.map { |item| ItemPresenter.call(item) },
+               items:
+                 items.map do |item|
+                   ItemPresenter.call(item, guardian: guardian)
+                 end,
                counts: status_counts(summary_scope),
                pagination: {
                  page: page,
@@ -52,7 +55,7 @@ module ::MashReviewDashboard
         ).find(item.id)
 
       render json: {
-               item: ItemPresenter.call(item),
+               item: ItemPresenter.call(item, guardian: guardian),
                notes:
                  item
                    .notes
@@ -69,6 +72,58 @@ module ::MashReviewDashboard
              }
     end
 
+    def content
+      item = find_visible_review_item(params[:id])
+      post = review_post(item)
+      guardian.ensure_can_see!(post)
+
+      render json: { content: content_json(item, post) }
+    end
+
+    def update_content
+      item = find_visible_review_item(params[:id])
+      post = review_post(item)
+      guardian.ensure_can_edit!(post)
+
+      if params[:original_raw].present? && params[:original_raw] != post.raw
+        return render_json_error(I18n.t("edit_conflict"), status: 409)
+      end
+
+      changes = {
+        raw: params.require(:raw).to_s,
+        edit_reason: "Edited from the moderator review dashboard"
+      }
+
+      if item.topic_target? && params.key?(:title) &&
+           params[:title].to_s.strip != item.topic.title
+        guardian.ensure_can_edit_topic!(item.topic)
+        changes[:title] = params[:title].to_s.strip
+      end
+
+      content_changed = changes[:raw] != post.raw || changes.key?(:title)
+
+      revisor = PostRevisor.new(post, item.topic)
+      revisor.revise!(current_user, changes)
+
+      return render_json_error(post) if post.errors.present?
+      return render_json_error(item.topic) if item.topic.errors.present?
+
+      post.reload
+      item.topic.reload
+      if content_changed && SiteSetting.mash_review_reopen_on_edit
+        CapturePost.call(
+          post: post,
+          event_name: "edited",
+          actor: current_user
+        )
+      end
+
+      render json: {
+               content: content_json(item, post),
+               item: ItemPresenter.call(item.reload, guardian: guardian)
+             }
+    end
+
     def update_status
       item = find_visible_review_item(params[:id])
       status = params.require(:status).to_s
@@ -80,7 +135,9 @@ module ::MashReviewDashboard
         reason: params[:reason]
       )
 
-      render json: { item: ItemPresenter.call(item.reload) }
+      render json: {
+               item: ItemPresenter.call(item.reload, guardian: guardian)
+             }
     end
 
     def update_assignment
@@ -109,10 +166,30 @@ module ::MashReviewDashboard
         end
       end
 
-      render json: { item: ItemPresenter.call(item.reload) }
+      render json: {
+               item: ItemPresenter.call(item.reload, guardian: guardian)
+             }
     end
 
     private
+
+    def review_post(item)
+      post = item.post || item.topic&.first_post
+      raise Discourse::NotFound if post.blank?
+
+      post
+    end
+
+    def content_json(item, post)
+      {
+        raw: post.raw,
+        cooked: post.cooked,
+        title: item.topic.title,
+        can_edit: guardian.can_edit?(post),
+        can_edit_title:
+          item.topic_target? && guardian.can_edit_topic?(item.topic)
+      }
+    end
 
     def filtered_scope(scope, include_target_type:)
       scope = visible_to_staff(scope)

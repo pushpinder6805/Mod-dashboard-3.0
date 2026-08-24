@@ -2,12 +2,13 @@
 
 module ::MashReviewDashboard
   class ItemPresenter
-    def self.call(item)
-      new(item).as_json
+    def self.call(item, guardian:)
+      new(item, guardian: guardian).as_json
     end
 
-    def initialize(item)
+    def initialize(item, guardian:)
       @item = item
+      @guardian = guardian
     end
 
     def as_json
@@ -23,6 +24,11 @@ module ::MashReviewDashboard
         post_number: post&.post_number,
         title: topic&.title || "Deleted topic ##{@item.topic_id}",
         excerpt: post&.excerpt(240, text_entities: true, strip_links: true),
+        content_truncated: post&.raw.to_s.length > 240,
+        can_edit: post.present? && @guardian.can_edit?(post),
+        can_edit_title:
+          @item.topic_target? && topic.present? &&
+            @guardian.can_edit_topic?(topic),
         url: content_url(topic, post),
         category: category_json(topic&.category),
         author: user_json(@item.author),

@@ -9,6 +9,8 @@ The plugin renders at the top of `/review`, above the existing Activity Dashboar
 - Independent review records for topic starters and replies
 - Pending, In review, and Reviewed workflows
 - Combined chronological feed with filters
+- Expandable full post content without leaving the review queue
+- Permission-aware inline editing with normal Discourse post revisions
 - Editable staff-only notes
 - Immutable review and note-edit audit history
 - Automatic capture of new topics and replies

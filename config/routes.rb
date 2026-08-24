@@ -2,6 +2,8 @@
 
 MashReviewDashboard::Engine.routes.draw do
   get "/items" => "items#index"
+  get "/items/:id/content" => "items#content"
+  put "/items/:id/content" => "items#update_content"
   get "/items/:id" => "items#show"
   put "/items/:id/status" => "items#update_status"
   put "/items/:id/assignment" => "items#update_assignment"

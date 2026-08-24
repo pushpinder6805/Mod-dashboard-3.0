@@ -4,6 +4,7 @@ import { fn } from "@ember/helper";
 import { on } from "@ember/modifier";
 import { action } from "@ember/object";
 import { service } from "@ember/service";
+import { trustHTML } from "@ember/template";
 import { ajax } from "discourse/lib/ajax";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 
@@ -161,7 +162,12 @@ export default class MashReviewDashboard extends Component {
 
     try {
       const result = await ajax(`${BASE_URL}/items?${this.buildQuery()}`);
-      this.items = result.items;
+      this.items = result.items.map((item) => ({
+        ...item,
+        contentLoading: false,
+        editing: false,
+        expanded: false,
+      }));
       this.counts = result.counts;
       this.categories = result.categories;
       this.pagination = result.pagination;
@@ -247,6 +253,109 @@ export default class MashReviewDashboard extends Component {
       await this.load();
       if (this.details?.item?.id === item.id) {
         await this.openDetails(item);
+      }
+    } catch (error) {
+      popupAjaxError(error);
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  replaceItem(itemId, changes) {
+    this.items = this.items.map((item) =>
+      item.id === itemId ? { ...item, ...changes } : item
+    );
+  }
+
+  async fetchContent(item, expand = true) {
+    this.replaceItem(item.id, { contentLoading: true });
+
+    try {
+      const result = await ajax(`${BASE_URL}/items/${item.id}/content`);
+      this.replaceItem(item.id, {
+        ...result.content,
+        contentLoading: false,
+        expanded: expand,
+      });
+      return result.content;
+    } catch (error) {
+      this.replaceItem(item.id, { contentLoading: false });
+      popupAjaxError(error);
+    }
+  }
+
+  @action
+  async toggleContent(item) {
+    if (item.expanded) {
+      this.replaceItem(item.id, { expanded: false });
+      return;
+    }
+
+    if (item.cooked) {
+      this.replaceItem(item.id, { expanded: true });
+      return;
+    }
+
+    await this.fetchContent(item);
+  }
+
+  @action
+  async beginEdit(item) {
+    let content = item.raw ? item : await this.fetchContent(item);
+    if (!content) {
+      return;
+    }
+
+    this.replaceItem(item.id, {
+      editRaw: content.raw,
+      editTitle: content.title,
+      editing: true,
+      expanded: true,
+    });
+  }
+
+  @action
+  updateEditRaw(item, event) {
+    this.replaceItem(item.id, { editRaw: event.target.value });
+  }
+
+  @action
+  updateEditTitle(item, event) {
+    this.replaceItem(item.id, { editTitle: event.target.value });
+  }
+
+  @action
+  cancelEdit(item) {
+    this.replaceItem(item.id, { editing: false });
+  }
+
+  @action
+  async saveEdit(item, event) {
+    event.preventDefault();
+    if (!item.editRaw?.trim()) {
+      return;
+    }
+
+    this.saving = true;
+    try {
+      const result = await ajax(`${BASE_URL}/items/${item.id}/content`, {
+        type: "PUT",
+        data: {
+          raw: item.editRaw,
+          original_raw: item.raw,
+          title: item.editTitle,
+        },
+      });
+      this.replaceItem(item.id, {
+        ...result.item,
+        ...result.content,
+        editRaw: null,
+        editTitle: null,
+        editing: false,
+        expanded: true,
+      });
+      if (result.item.status !== item.status) {
+        await this.load();
       }
     } catch (error) {
       popupAjaxError(error);
@@ -457,6 +566,10 @@ export default class MashReviewDashboard extends Component {
     return targetType === "Post" ? "Post / Reply" : "Topic";
   }
 
+  renderedContent(item) {
+    return trustHTML(item.cooked || "");
+  }
+
   <template>
     <section class="mash-review-dashboard" aria-label="MASH Review Dashboard">
       <header class="mash-review-dashboard__header">
@@ -645,7 +758,70 @@ export default class MashReviewDashboard extends Component {
                   class="mash-review-item__title"
                   href={{item.url}}
                 >{{item.title}}</a>
-                {{#if item.excerpt}}<p>{{item.excerpt}}</p>{{/if}}
+                {{#if item.editing}}
+                  <form
+                    class="mash-review-item__editor"
+                    {{on "submit" (fn this.saveEdit item)}}
+                  >
+                    {{#if item.can_edit_title}}
+                      <label>
+                        Topic title
+                        <input
+                          type="text"
+                          value={{item.editTitle}}
+                          {{on "input" (fn this.updateEditTitle item)}}
+                        />
+                      </label>
+                    {{/if}}
+                    <label>
+                      Content
+                      <textarea
+                        rows="10"
+                        value={{item.editRaw}}
+                        {{on "input" (fn this.updateEditRaw item)}}
+                      ></textarea>
+                    </label>
+                    <div class="mash-review-item__editor-actions">
+                      <button
+                        type="submit"
+                        class="btn btn-primary"
+                        disabled={{this.saving}}
+                      >Save changes</button>
+                      <button
+                        type="button"
+                        class="btn btn-default"
+                        disabled={{this.saving}}
+                        {{on "click" (fn this.cancelEdit item)}}
+                      >Cancel</button>
+                    </div>
+                  </form>
+                {{else}}
+                  <div class="mash-review-item__body">
+                    {{#if item.expanded}}
+                      <div class="mash-review-item__full-content">
+                        {{this.renderedContent item}}
+                      </div>
+                    {{else if item.excerpt}}
+                      <p>{{item.excerpt}}</p>
+                    {{/if}}
+                    {{#if item.content_truncated}}
+                      <button
+                        type="button"
+                        class="btn btn-flat mash-review-item__more-button"
+                        disabled={{item.contentLoading}}
+                        {{on "click" (fn this.toggleContent item)}}
+                      >
+                        {{#if item.contentLoading}}
+                          Loading…
+                        {{else if item.expanded}}
+                          Less
+                        {{else}}
+                          More
+                        {{/if}}
+                      </button>
+                    {{/if}}
+                  </div>
+                {{/if}}
                 <div class="mash-review-item__meta">
                   <span>By @{{item.author.username}}</span>
                   <span>Status:
@@ -655,6 +831,16 @@ export default class MashReviewDashboard extends Component {
               </div>
 
               <div class="mash-review-item__actions">
+                {{#if item.can_edit}}
+                  <button
+                    type="button"
+                    class="btn btn-default"
+                    disabled={{this.saving}}
+                    {{on "click" (fn this.beginEdit item)}}
+                  >
+                    Edit
+                  </button>
+                {{/if}}
                 {{#if item.is_pending}}
                   <button
                     type="button"

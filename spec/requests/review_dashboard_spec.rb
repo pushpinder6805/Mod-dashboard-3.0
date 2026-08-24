@@ -76,6 +76,59 @@ describe MashReviewDashboard::ItemsController do
     end
   end
 
+  describe "review item content" do
+    it "returns full content and edits a topic through Discourse revisions" do
+      item = MashReviewDashboard::CapturePost.call(post: first_post)
+      original_raw = first_post.raw
+      sign_in(admin)
+      MashReviewDashboard::Transition.call(
+        item: item,
+        status: "reviewed",
+        actor: admin
+      )
+
+      get "/mash-review-dashboard/items/#{item.id}/content.json"
+
+      expect(response.status).to eq(200)
+      expect(response.parsed_body.dig("content", "raw")).to eq(original_raw)
+      expect(response.parsed_body.dig("content", "can_edit")).to eq(true)
+
+      put "/mash-review-dashboard/items/#{item.id}/content.json",
+          params: {
+            raw: "Updated content from the moderator review dashboard.",
+            original_raw: original_raw,
+            title: "Updated topic title from moderation"
+          }
+
+      expect(response.status).to eq(200)
+      expect(first_post.reload.raw).to eq(
+        "Updated content from the moderator review dashboard."
+      )
+      expect(topic.reload.title).to eq("Updated topic title from moderation")
+      expect(item.reload).to be_pending
+      expect(item.events.where(action: "content_edited")).to exist
+      expect(response.parsed_body.dig("content", "cooked")).to include(
+        "Updated content"
+      )
+    end
+
+    it "rejects an edit when the post changed after the editor opened" do
+      item = MashReviewDashboard::CapturePost.call(post: first_post)
+      sign_in(admin)
+
+      put "/mash-review-dashboard/items/#{item.id}/content.json",
+          params: {
+            raw: "A conflicting dashboard edit with enough content.",
+            original_raw: "An outdated version of the post."
+          }
+
+      expect(response.status).to eq(409)
+      expect(first_post.reload.raw).not_to eq(
+        "A conflicting dashboard edit with enough content."
+      )
+    end
+  end
+
   describe "PUT /mash-review-dashboard/items/:id/assignment.json" do
     it "assigns a moderator and moves a pending item into review" do
       item = MashReviewDashboard::CapturePost.call(post: first_post)
