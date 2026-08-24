@@ -9,9 +9,8 @@ The plugin renders at the top of `/review`, above the existing Activity Dashboar
 - Independent review records for topic starters and replies
 - Pending, In review, and Reviewed workflows
 - Combined chronological feed with filters
-- Moderator assignment
 - Editable staff-only notes
-- Immutable review, assignment, and note-edit audit history
+- Immutable review and note-edit audit history
 - Automatic capture of new topics and replies
 - Optional automatic reopening after content edits
 - Topic review status synchronized with the legacy `reviewed` tag
@@ -21,13 +20,19 @@ The plugin renders at the top of `/review`, above the existing Activity Dashboar
 
 ## Installation
 
-Clone this repository into the Discourse `plugins` directory using the plugin directory name shown below:
+Clone this repository into the Discourse `plugins` directory using the required safe plugin directory name shown below. The destination must be `mash-review-dashboard`; do not use the GitHub repository name as the directory because its dot prevents Discourse from serving the generated stylesheet.
 
 ```bash
-git clone https://github.com/pushpinder6805/Mod-dashboard-3.0.git plugins/Mod-dashboard-3.0
+git clone https://github.com/pushpinder6805/Mod-dashboard-3.0.git plugins/mash-review-dashboard
 ```
 
-For a standard Docker installation, add the clone command to `containers/app.yml` under `hooks.after_code.exec.cmd`, then rebuild the container:
+For a standard Docker installation, add this clone command to `containers/app.yml` under `hooks.after_code.exec.cmd`:
+
+```yaml
+- git clone https://github.com/pushpinder6805/Mod-dashboard-3.0.git mash-review-dashboard
+```
+
+Remove or replace any existing clone command that installs the repository as `Mod-dashboard-3.0`, then rebuild the container:
 
 ```bash
 cd /var/discourse
@@ -60,7 +65,7 @@ The legacy backfill is idempotent. Existing topics carrying the configured `revi
 - The new dashboard is shown only to staff and appears above the old dashboard on `/review`.
 - A new topic creates one Pending Topic item.
 - A new reply creates an independent Pending Reply item.
-- Status, assignment, and notes remain after refresh and in another browser.
+- Status and notes remain after refresh and in another browser.
 - Unreview returns an item to Pending without deleting its history or notes.
 - Edited reviewed content returns to Pending when the reopen setting is enabled.
 - Non-staff users receive no dashboard UI and cannot access plugin endpoints.
@@ -68,11 +73,11 @@ The legacy backfill is idempotent. Existing topics carrying the configured `revi
 
 ## Development verification
 
-From a Discourse development checkout with this repository mounted at `plugins/Mod-dashboard-3.0`:
+From a Discourse development checkout with this repository mounted at `plugins/mash-review-dashboard`:
 
 ```bash
-bundle exec rake plugin:spec[Mod-dashboard-3.0]
-pnpm --dir plugins/Mod-dashboard-3.0 lint
+bundle exec rake plugin:spec[mash-review-dashboard]
+pnpm --dir plugins/mash-review-dashboard lint
 ```
 
 ## Data ownership
