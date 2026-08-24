@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# name: Mod-dashboard-3.0
+# name: mash-review-dashboard
 # about: A permanent, backend-backed moderator review dashboard for topics and replies.
-# version: 1.0.0
+# version: 1.0.1
 # authors: MASH Platform
 # url: https://github.com/pushpinder6805/Mod-dashboard-3.0
 # required_version: 3.3.0
@@ -12,7 +12,7 @@ enabled_site_setting :mash_review_dashboard_enabled
 register_asset "stylesheets/common/mash-review-dashboard.scss"
 
 module ::MashReviewDashboard
-  DISCOURSE_PLUGIN_NAME = "Mod-dashboard-3.0"
+  DISCOURSE_PLUGIN_NAME = "mash-review-dashboard"
   PLUGIN_NAME = "mash-review-dashboard"
 end
 

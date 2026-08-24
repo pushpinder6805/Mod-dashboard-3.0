@@ -1,5 +1,5 @@
 import Component from "@glimmer/component";
-import MashReviewDashboard from "discourse/plugins/Mod-dashboard-3.0/discourse/components/mash-review-dashboard";
+import MashReviewDashboard from "discourse/plugins/mash-review-dashboard/discourse/components/mash-review-dashboard";
 
 export default class MashReviewDashboardConnector extends Component {
   static shouldRender(_args, context, owner) {
