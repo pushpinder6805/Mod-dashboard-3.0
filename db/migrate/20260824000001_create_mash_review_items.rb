@@ -20,7 +20,8 @@ class CreateMashReviewItems < ActiveRecord::Migration[7.0]
     end
 
     add_index :mash_review_items, %i[target_type target_id], unique: true
-    add_index :mash_review_items, %i[active status content_created_at],
+    add_index :mash_review_items,
+              %i[active status content_created_at],
               name: "idx_mash_review_items_queue"
     add_index :mash_review_items, :topic_id
     add_index :mash_review_items, :post_id
@@ -29,4 +30,3 @@ class CreateMashReviewItems < ActiveRecord::Migration[7.0]
     add_index :mash_review_items, :reviewed_by_id
   end
 end
-

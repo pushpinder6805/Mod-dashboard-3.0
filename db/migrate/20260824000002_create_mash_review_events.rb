@@ -13,9 +13,9 @@ class CreateMashReviewEvents < ActiveRecord::Migration[7.0]
       t.timestamps
     end
 
-    add_index :mash_review_events, %i[review_item_id created_at],
+    add_index :mash_review_events,
+              %i[review_item_id created_at],
               name: "idx_mash_review_events_history"
     add_index :mash_review_events, :actor_id
   end
 end
-

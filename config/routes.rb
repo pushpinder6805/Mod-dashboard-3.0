@@ -17,4 +17,3 @@ end
 Discourse::Application.routes.draw do
   mount ::MashReviewDashboard::Engine, at: "/mash-review-dashboard"
 end
-

@@ -14,4 +14,3 @@ module ::MashReviewDashboard
     validates :content, presence: true, length: { maximum: 10_000 }
   end
 end
-

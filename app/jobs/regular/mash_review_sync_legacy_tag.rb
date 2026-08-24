@@ -7,11 +7,12 @@ module ::Jobs
       return if topic.blank? || topic.first_post.blank?
 
       actor = User.find_by(id: args[:actor_id]) || Discourse.system_user
-      item = MashReviewDashboard::CapturePost.call(
-        post: topic.first_post,
-        event_name: "legacy_tag_changed",
-        actor: actor,
-      )
+      item =
+        MashReviewDashboard::CapturePost.call(
+          post: topic.first_post,
+          event_name: "legacy_tag_changed",
+          actor: actor
+        )
       target_status = args[:reviewed] ? "reviewed" : "pending"
       return if item.status == target_status
 
@@ -19,7 +20,7 @@ module ::Jobs
         item: item,
         status: target_status,
         actor: actor,
-        action: args[:reviewed] ? "legacy_tag_added" : "legacy_tag_removed",
+        action: args[:reviewed] ? "legacy_tag_added" : "legacy_tag_removed"
       )
     end
   end

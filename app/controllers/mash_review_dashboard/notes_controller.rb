@@ -13,7 +13,9 @@ module ::MashReviewDashboard
         item.events.create!(
           action: "note_created",
           actor: current_user,
-          data: { note_id: note.id },
+          data: {
+            note_id: note.id
+          }
         )
       end
 
@@ -35,8 +37,8 @@ module ::MashReviewDashboard
           data: {
             note_id: note.id,
             previous_content: previous_content,
-            new_content: content,
-          },
+            new_content: content
+          }
         )
       end
 
@@ -52,7 +54,7 @@ module ::MashReviewDashboard
         created_by: user_json(note.created_by),
         updated_by: user_json(note.updated_by),
         created_at: note.created_at,
-        updated_at: note.updated_at,
+        updated_at: note.updated_at
       }
     end
   end

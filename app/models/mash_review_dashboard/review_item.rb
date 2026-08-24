@@ -35,4 +35,3 @@ module ::MashReviewDashboard
     end
   end
 end
-

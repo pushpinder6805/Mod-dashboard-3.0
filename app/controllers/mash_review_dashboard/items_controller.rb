@@ -5,7 +5,8 @@ module ::MashReviewDashboard
     def index
       page = [params.fetch(:page, 1).to_i, 1].max
       per_page = SiteSetting.mash_review_items_per_page
-      unfiltered_status_scope = filtered_scope(ReviewItem.in_queue, include_status: false)
+      unfiltered_status_scope =
+        filtered_scope(ReviewItem.in_queue, include_status: false)
       scope = unfiltered_status_scope
       if ReviewItem.statuses.key?(params[:status].to_s)
         scope = scope.where(status: params[:status])
@@ -13,7 +14,13 @@ module ::MashReviewDashboard
       total = scope.count
       items =
         scope
-          .includes(:author, :assigned_to, :reviewed_by, :post, topic: :category)
+          .includes(
+            :author,
+            :assigned_to,
+            :reviewed_by,
+            :post,
+            topic: :category
+          )
           .chronological
           .offset((page - 1) * per_page)
           .limit(per_page)
@@ -25,22 +32,40 @@ module ::MashReviewDashboard
                  page: page,
                  per_page: per_page,
                  total: total,
-                 has_more: page * per_page < total,
+                 has_more: page * per_page < total
                },
                staff: staff_users,
                categories: categories,
-               migration: migration_state,
+               migration: migration_state
              }
     end
 
     def show
       item = find_visible_review_item(params[:id])
-      item = ReviewItem.includes(:topic, :post, :author, :assigned_to, :reviewed_by).find(item.id)
+      item =
+        ReviewItem.includes(
+          :topic,
+          :post,
+          :author,
+          :assigned_to,
+          :reviewed_by
+        ).find(item.id)
 
       render json: {
                item: ItemPresenter.call(item),
-               notes: item.notes.includes(:created_by, :updated_by).order(created_at: :asc).map { |note| note_json(note) },
-               events: item.events.includes(:actor).order(created_at: :desc).limit(200).map { |event| event_json(event) },
+               notes:
+                 item
+                   .notes
+                   .includes(:created_by, :updated_by)
+                   .order(created_at: :asc)
+                   .map { |note| note_json(note) },
+               events:
+                 item
+                   .events
+                   .includes(:actor)
+                   .order(created_at: :desc)
+                   .limit(200)
+                   .map { |event| event_json(event) }
              }
     end
 
@@ -52,7 +77,7 @@ module ::MashReviewDashboard
         item: item,
         status: status,
         actor: current_user,
-        reason: params[:reason],
+        reason: params[:reason]
       )
 
       render json: { item: ItemPresenter.call(item.reload) }
@@ -70,8 +95,8 @@ module ::MashReviewDashboard
           actor: current_user,
           data: {
             previous_assignee_id: previous_assignee&.id,
-            assigned_to_id: assignee&.id,
-          },
+            assigned_to_id: assignee&.id
+          }
         )
 
         if assignee.present? && item.pending?
@@ -79,7 +104,7 @@ module ::MashReviewDashboard
             item: item,
             status: "in_review",
             actor: current_user,
-            action: "claimed_for_review",
+            action: "claimed_for_review"
           )
         end
       end
@@ -91,10 +116,18 @@ module ::MashReviewDashboard
 
     def filtered_scope(scope, include_status:)
       scope = visible_to_staff(scope)
-      scope = scope.where(status: params[:status]) if include_status && ReviewItem.statuses.key?(params[:status].to_s)
-      scope = scope.where(target_type: normalized_target_type) if normalized_target_type.present?
-      scope = scope.where(assigned_to_id: params[:assigned_to_id]) if params[:assigned_to_id].present?
-      scope = scope.where(reviewed_by_id: params[:reviewed_by_id]) if params[:reviewed_by_id].present?
+      scope = scope.where(status: params[:status]) if include_status &&
+        ReviewItem.statuses.key?(params[:status].to_s)
+      scope =
+        scope.where(
+          target_type: normalized_target_type
+        ) if normalized_target_type.present?
+      scope = scope.where(assigned_to_id: params[:assigned_to_id]) if params[
+        :assigned_to_id
+      ].present?
+      scope = scope.where(reviewed_by_id: params[:reviewed_by_id]) if params[
+        :reviewed_by_id
+      ].present?
       scope = filter_moderator(scope)
       scope = filter_author(scope)
       scope = filter_category(scope)
@@ -104,11 +137,15 @@ module ::MashReviewDashboard
 
     def visible_to_staff(scope)
       scope
-        .joins("INNER JOIN topics mash_review_topics ON mash_review_topics.id = mash_review_items.topic_id")
-        .joins("LEFT JOIN categories mash_review_categories ON mash_review_categories.id = mash_review_topics.category_id")
+        .joins(
+          "INNER JOIN topics mash_review_topics ON mash_review_topics.id = mash_review_items.topic_id"
+        )
+        .joins(
+          "LEFT JOIN categories mash_review_categories ON mash_review_categories.id = mash_review_topics.category_id"
+        )
         .where(
           "mash_review_topics.category_id IS NULL OR NOT mash_review_categories.read_restricted OR mash_review_topics.category_id IN (:secure_category_ids)",
-          secure_category_ids: guardian.secure_category_ids,
+          secure_category_ids: guardian.secure_category_ids
         )
     end
 
@@ -124,7 +161,7 @@ module ::MashReviewDashboard
 
       scope.where(
         "mash_review_items.assigned_to_id = :moderator_id OR mash_review_items.reviewed_by_id = :moderator_id",
-        moderator_id: params[:moderator_id],
+        moderator_id: params[:moderator_id]
       )
     end
 
@@ -132,23 +169,35 @@ module ::MashReviewDashboard
       return scope if params[:author].blank?
 
       username_query = params[:author].to_s.downcase.strip
-      user_ids = User.where("username_lower LIKE ?", "%#{username_query}%").select(:id)
+      user_ids =
+        User.where("username_lower LIKE ?", "%#{username_query}%").select(:id)
       scope.where(author_id: user_ids)
     end
 
     def filter_category(scope)
       return scope if params[:category_id].blank?
 
-      scope.where(topic_id: Topic.where(category_id: params[:category_id]).select(:id))
+      scope.where(
+        topic_id: Topic.where(category_id: params[:category_id]).select(:id)
+      )
     end
 
     def filter_dates(scope)
-      if params[:date_from].present? && (date_from = parse_date(params[:date_from]))
-        scope = scope.where("mash_review_items.content_created_at >= ?", date_from.beginning_of_day)
+      if params[:date_from].present? &&
+           (date_from = parse_date(params[:date_from]))
+        scope =
+          scope.where(
+            "mash_review_items.content_created_at >= ?",
+            date_from.beginning_of_day
+          )
       end
 
       if params[:date_to].present? && (date_to = parse_date(params[:date_to]))
-        scope = scope.where("mash_review_items.content_created_at <= ?", date_to.end_of_day)
+        scope =
+          scope.where(
+            "mash_review_items.content_created_at <= ?",
+            date_to.end_of_day
+          )
       end
 
       scope
@@ -166,7 +215,7 @@ module ::MashReviewDashboard
         all: grouped.values.sum,
         pending: grouped.fetch(ReviewItem.statuses[:pending], 0),
         in_review: grouped.fetch(ReviewItem.statuses[:in_review], 0),
-        reviewed: grouped.fetch(ReviewItem.statuses[:reviewed], 0),
+        reviewed: grouped.fetch(ReviewItem.statuses[:reviewed], 0)
       }
     end
 
@@ -185,14 +234,17 @@ module ::MashReviewDashboard
       Category
         .where(
           "NOT read_restricted OR id IN (:secure_category_ids)",
-          secure_category_ids: guardian.secure_category_ids,
+          secure_category_ids: guardian.secure_category_ids
         )
         .order(:name)
-        .map { |category| { id: category.id, name: category.name, color: category.color } }
+        .map do |category|
+          { id: category.id, name: category.name, color: category.color }
+        end
     end
 
     def migration_state
-      PluginStore.get(PLUGIN_NAME, "legacy_backfill") || { status: "not_started" }
+      PluginStore.get(PLUGIN_NAME, "legacy_backfill") ||
+        { status: "not_started" }
     end
 
     def find_staff_assignee
@@ -211,7 +263,7 @@ module ::MashReviewDashboard
         created_by: user_json(note.created_by),
         updated_by: user_json(note.updated_by),
         created_at: note.created_at,
-        updated_at: note.updated_at,
+        updated_at: note.updated_at
       }
     end
 
@@ -224,7 +276,7 @@ module ::MashReviewDashboard
         reason: event.reason,
         actor: user_json(event.actor),
         data: event.data,
-        created_at: event.created_at,
+        created_at: event.created_at
       }
     end
   end

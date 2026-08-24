@@ -19,7 +19,11 @@ module ::MashReviewDashboard
 
       target_type = @post.post_number == 1 ? "Topic" : "Post"
       target_id = target_type == "Topic" ? @post.topic_id : @post.id
-      item = ReviewItem.find_or_initialize_by(target_type: target_type, target_id: target_id)
+      item =
+        ReviewItem.find_or_initialize_by(
+          target_type: target_type,
+          target_id: target_id
+        )
       created = item.new_record?
 
       item.assign_attributes(
@@ -27,7 +31,7 @@ module ::MashReviewDashboard
         post_id: @post.id,
         author_id: @post.user_id,
         content_created_at: @post.created_at,
-        active: @post.deleted_at.blank? && @post.topic.deleted_at.blank?,
+        active: @post.deleted_at.blank? && @post.topic.deleted_at.blank?
       )
       item.save!
 
@@ -39,7 +43,7 @@ module ::MashReviewDashboard
           status: "pending",
           actor: @actor,
           action: "content_edited",
-          reason: "Content changed after it was reviewed",
+          reason: "Content changed after it was reviewed"
         )
       elsif @event_name == "recovered"
         item.update!(active: true)

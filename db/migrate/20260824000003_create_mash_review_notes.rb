@@ -10,7 +10,8 @@ class CreateMashReviewNotes < ActiveRecord::Migration[7.0]
       t.timestamps
     end
 
-    add_index :mash_review_notes, %i[review_item_id created_at],
+    add_index :mash_review_notes,
+              %i[review_item_id created_at],
               name: "idx_mash_review_notes_item"
     add_index :mash_review_notes, :created_by_id
   end

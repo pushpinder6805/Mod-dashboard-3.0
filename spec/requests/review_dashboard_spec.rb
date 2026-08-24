@@ -33,10 +33,9 @@ describe MashReviewDashboard::ItemsController do
       get "/mash-review-dashboard/items.json", params: { status: "pending" }
 
       expect(response.status).to eq(200)
-      expect(response.parsed_body["items"].map { |item| item["id"] }).to contain_exactly(
-        topic_item.id,
-        reply_item.id,
-      )
+      expect(
+        response.parsed_body["items"].map { |item| item["id"] }
+      ).to contain_exactly(topic_item.id, reply_item.id)
       expect(response.parsed_body.dig("counts", "pending")).to eq(2)
     end
   end
@@ -46,7 +45,10 @@ describe MashReviewDashboard::ItemsController do
       item = MashReviewDashboard::CapturePost.call(post: first_post)
       sign_in(moderator)
 
-      put "/mash-review-dashboard/items/#{item.id}/status.json", params: { status: "reviewed" }
+      put "/mash-review-dashboard/items/#{item.id}/status.json",
+          params: {
+            status: "reviewed"
+          }
       expect(response.status).to eq(200)
       expect(item.reload).to be_reviewed
       expect(item.reviewed_by).to eq(moderator)
@@ -54,7 +56,7 @@ describe MashReviewDashboard::ItemsController do
       put "/mash-review-dashboard/items/#{item.id}/status.json",
           params: {
             status: "pending",
-            reason: "Needs a second review",
+            reason: "Needs a second review"
           }
       expect(response.status).to eq(200)
       expect(item.reload).to be_pending
@@ -70,7 +72,7 @@ describe MashReviewDashboard::ItemsController do
 
       put "/mash-review-dashboard/items/#{item.id}/assignment.json",
           params: {
-            assigned_to_id: moderator.id,
+            assigned_to_id: moderator.id
           }
 
       expect(response.status).to eq(200)
@@ -97,20 +99,22 @@ describe MashReviewDashboard::NotesController do
 
     post "/mash-review-dashboard/items/#{item.id}/notes.json",
          params: {
-           content: "Checking this with the policy team.",
+           content: "Checking this with the policy team."
          }
     expect(response.status).to eq(200)
     note_id = response.parsed_body.dig("note", "id")
 
     put "/mash-review-dashboard/notes/#{note_id}.json",
         params: {
-          content: "Policy team confirmed this is correct.",
+          content: "Policy team confirmed this is correct."
         }
     expect(response.status).to eq(200)
 
     note = MashReviewDashboard::ReviewNote.find(note_id)
     expect(note.content).to eq("Policy team confirmed this is correct.")
     edit_event = item.events.find_by(action: "note_edited")
-    expect(edit_event.data["previous_content"]).to eq("Checking this with the policy team.")
+    expect(edit_event.data["previous_content"]).to eq(
+      "Checking this with the policy team."
+    )
   end
 end

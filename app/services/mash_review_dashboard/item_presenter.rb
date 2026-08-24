@@ -36,7 +36,7 @@ module ::MashReviewDashboard
         content_created_at: @item.content_created_at,
         notes_count: @item.notes_count,
         legacy: @item.legacy,
-        active: @item.active,
+        active: @item.active
       }
     end
 

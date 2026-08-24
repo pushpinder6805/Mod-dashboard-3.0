@@ -2,14 +2,21 @@
 
 module ::MashReviewDashboard
   class Transition
-    def self.call(item:, status:, actor:, action: "status_changed", reason: nil, reviewed_at: nil)
+    def self.call(
+      item:,
+      status:,
+      actor:,
+      action: "status_changed",
+      reason: nil,
+      reviewed_at: nil
+    )
       new(
         item: item,
         status: status,
         actor: actor,
         action: action,
         reason: reason,
-        reviewed_at: reviewed_at,
+        reviewed_at: reviewed_at
       ).call
     end
 
@@ -23,7 +30,9 @@ module ::MashReviewDashboard
     end
 
     def call
-      raise Discourse::InvalidParameters.new(:status) if !ReviewItem.statuses.key?(@status)
+      if !ReviewItem.statuses.key?(@status)
+        raise Discourse::InvalidParameters.new(:status)
+      end
 
       from_status = @item.status
       return @item if from_status == @status && @action == "status_changed"
@@ -45,7 +54,7 @@ module ::MashReviewDashboard
           from_status: from_status,
           to_status: @status,
           actor: @actor,
-          reason: @reason,
+          reason: @reason
         )
       end
 
@@ -76,7 +85,7 @@ module ::MashReviewDashboard
       DiscourseTagging.tag_topic_by_names(topic, guardian, tag_names.uniq)
     rescue StandardError => error
       Rails.logger.warn(
-        "[#{PLUGIN_NAME}] Could not synchronize reviewed tag for topic #{@item.topic_id}: #{error.message}",
+        "[#{PLUGIN_NAME}] Could not synchronize reviewed tag for topic #{@item.topic_id}: #{error.message}"
       )
     end
   end

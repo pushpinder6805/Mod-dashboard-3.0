@@ -28,7 +28,7 @@ RSpec.describe MashReviewDashboard::CapturePost do
     MashReviewDashboard::Transition.call(
       item: item,
       status: "reviewed",
-      actor: Discourse.system_user,
+      actor: Discourse.system_user
     )
 
     described_class.call(post: first_post, event_name: "edited")
@@ -41,7 +41,10 @@ RSpec.describe MashReviewDashboard::CapturePost do
     2.times { described_class.call(post: first_post) }
 
     expect(
-      MashReviewDashboard::ReviewItem.where(target_type: "Topic", target_id: topic.id).count,
+      MashReviewDashboard::ReviewItem.where(
+        target_type: "Topic",
+        target_id: topic.id
+      ).count
     ).to eq(1)
   end
 end

@@ -41,7 +41,7 @@ after_initialize do
       topic_id: post.topic_id,
       post_id: post.id,
       post_number: post.post_number,
-      event: "destroyed",
+      event: "destroyed"
     )
   end
 
@@ -53,7 +53,7 @@ after_initialize do
       topic_id: post.topic_id,
       post_id: post.id,
       post_number: post.post_number,
-      event: "recovered",
+      event: "recovered"
     )
   end
 
@@ -74,7 +74,7 @@ after_initialize do
       :mash_review_sync_legacy_tag,
       topic_id: topic.id,
       reviewed: is_reviewed,
-      actor_id: user&.id,
+      actor_id: user&.id
     )
   end
 end

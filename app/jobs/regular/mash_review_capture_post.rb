@@ -6,7 +6,10 @@ module ::Jobs
       post = Post.find_by(id: args[:post_id])
       return if post.blank?
 
-      MashReviewDashboard::CapturePost.call(post: post, event_name: args[:event].to_s)
+      MashReviewDashboard::CapturePost.call(
+        post: post,
+        event_name: args[:event].to_s
+      )
     end
   end
 end

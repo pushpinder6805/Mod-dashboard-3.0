@@ -12,4 +12,3 @@ module ::MashReviewDashboard
     validates :action, presence: true
   end
 end
-
