@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# name: mash-review-dashboard
+# name: Mod-dashboard-3.0
 # about: A permanent, backend-backed moderator review dashboard for topics and replies.
 # version: 1.0.0
 # authors: MASH Platform

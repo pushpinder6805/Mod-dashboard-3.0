@@ -24,7 +24,7 @@ The plugin renders at the top of `/review`, above the existing Activity Dashboar
 Clone this repository into the Discourse `plugins` directory using the plugin directory name shown below:
 
 ```bash
-git clone https://github.com/pushpinder6805/Mod-dashboard-3.0.git plugins/mash-review-dashboard
+git clone https://github.com/pushpinder6805/Mod-dashboard-3.0.git plugins/Mod-dashboard-3.0
 ```
 
 For a standard Docker installation, add the clone command to `containers/app.yml` under `hooks.after_code.exec.cmd`, then rebuild the container:
@@ -68,11 +68,11 @@ The legacy backfill is idempotent. Existing topics carrying the configured `revi
 
 ## Development verification
 
-From a Discourse development checkout with this repository mounted at `plugins/mash-review-dashboard`:
+From a Discourse development checkout with this repository mounted at `plugins/Mod-dashboard-3.0`:
 
 ```bash
-bundle exec rake plugin:spec[mash-review-dashboard]
-pnpm --dir plugins/mash-review-dashboard lint
+bundle exec rake plugin:spec[Mod-dashboard-3.0]
+pnpm --dir plugins/Mod-dashboard-3.0 lint
 ```
 
 ## Data ownership
