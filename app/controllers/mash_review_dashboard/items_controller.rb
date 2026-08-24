@@ -111,11 +111,7 @@ module ::MashReviewDashboard
       post.reload
       item.topic.reload
       if content_changed && SiteSetting.mash_review_reopen_on_edit
-        CapturePost.call(
-          post: post,
-          event_name: "edited",
-          actor: current_user
-        )
+        CapturePost.call(post: post, event_name: "edited", actor: current_user)
       end
 
       render json: {
@@ -135,9 +131,7 @@ module ::MashReviewDashboard
         reason: params[:reason]
       )
 
-      render json: {
-               item: ItemPresenter.call(item.reload, guardian: guardian)
-             }
+      render json: { item: ItemPresenter.call(item.reload, guardian: guardian) }
     end
 
     def update_assignment
@@ -166,9 +160,7 @@ module ::MashReviewDashboard
         end
       end
 
-      render json: {
-               item: ItemPresenter.call(item.reload, guardian: guardian)
-             }
+      render json: { item: ItemPresenter.call(item.reload, guardian: guardian) }
     end
 
     private
