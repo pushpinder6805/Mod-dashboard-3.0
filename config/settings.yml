@@ -1,0 +1,15 @@
+plugins:
+  mash_review_dashboard_enabled:
+    default: true
+    client: true
+  mash_review_reopen_on_edit:
+    default: true
+  mash_review_legacy_replies_inherit_reviewed:
+    default: true
+  mash_review_reviewed_tag:
+    default: "reviewed"
+  mash_review_items_per_page:
+    default: 30
+    min: 10
+    max: 100
+

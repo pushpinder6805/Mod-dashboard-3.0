@@ -1,0 +1,3 @@
+plugins:
+  - syntax_tree/rbs
+  - syntax_tree/haml

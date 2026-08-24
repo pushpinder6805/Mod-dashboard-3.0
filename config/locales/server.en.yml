@@ -1,0 +1,8 @@
+en:
+  site_settings:
+    mash_review_dashboard_enabled: "Enable the MASH review dashboard above the existing /review activity dashboard"
+    mash_review_reopen_on_edit: "Return reviewed content to Pending when its content is edited"
+    mash_review_legacy_replies_inherit_reviewed: "During legacy backfill, mark existing replies in reviewed-tag topics as reviewed"
+    mash_review_reviewed_tag: "Legacy topic tag that represents reviewed content"
+    mash_review_items_per_page: "Number of review items returned per dashboard page"
+
