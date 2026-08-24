@@ -213,9 +213,9 @@ module ::MashReviewDashboard
       grouped = scope.group(:status).count
       {
         all: grouped.values.sum,
-        pending: grouped.fetch(ReviewItem.statuses[:pending], 0),
-        in_review: grouped.fetch(ReviewItem.statuses[:in_review], 0),
-        reviewed: grouped.fetch(ReviewItem.statuses[:reviewed], 0)
+        pending: grouped.fetch("pending", 0),
+        in_review: grouped.fetch("in_review", 0),
+        reviewed: grouped.fetch("reviewed", 0)
       }
     end
 

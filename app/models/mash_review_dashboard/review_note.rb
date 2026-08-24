@@ -14,3 +14,21 @@ module ::MashReviewDashboard
     validates :content, presence: true, length: { maximum: 10_000 }
   end
 end
+
+# == Schema Information
+#
+# Table name: mash_review_notes
+#
+#  id             :bigint           not null, primary key
+#  content        :text             not null
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  created_by_id  :bigint           not null
+#  review_item_id :bigint           not null
+#  updated_by_id  :bigint
+#
+# Indexes
+#
+#  idx_mash_review_notes_item                (review_item_id,created_at)
+#  index_mash_review_notes_on_created_by_id  (created_by_id)
+#
