@@ -25,7 +25,6 @@ export default class MashReviewDashboard extends Component {
     in_review: 0,
     reviewed: 0,
   };
-  @tracked categories = [];
   @tracked migration = { status: "not_started" };
   @tracked migrationPreview;
   @tracked loading = true;
@@ -33,7 +32,6 @@ export default class MashReviewDashboard extends Component {
   @tracked error;
   @tracked status = "pending";
   @tracked targetType = "topic";
-  @tracked categoryId = "";
   @tracked author = "";
   @tracked dateFrom = "";
   @tracked dateTo = "";
@@ -139,9 +137,6 @@ export default class MashReviewDashboard extends Component {
     if (this.targetType) {
       query.set("target_type", this.targetType);
     }
-    if (this.categoryId) {
-      query.set("category_id", this.categoryId);
-    }
     if (this.author) {
       query.set("author", this.author);
     }
@@ -169,7 +164,6 @@ export default class MashReviewDashboard extends Component {
         expanded: false,
       }));
       this.counts = result.counts;
-      this.categories = result.categories;
       this.pagination = result.pagination;
       this.migration = result.migration || { status: "not_started" };
     } catch (error) {
@@ -205,11 +199,6 @@ export default class MashReviewDashboard extends Component {
   }
 
   @action
-  updateCategory(event) {
-    this.categoryId = event.target.value;
-  }
-
-  @action
   updateAuthor(event) {
     this.author = event.target.value;
   }
@@ -234,7 +223,6 @@ export default class MashReviewDashboard extends Component {
 
   @action
   clearFilters() {
-    this.categoryId = "";
     this.author = "";
     this.dateFrom = "";
     this.dateTo = "";
@@ -679,15 +667,6 @@ export default class MashReviewDashboard extends Component {
             <option value="">Topics and replies</option>
             <option value="topic">Topics</option>
             <option value="post">Replies</option>
-          </select>
-        </label>
-        <label>
-          Category
-          <select value={{this.categoryId}} {{on "change" this.updateCategory}}>
-            <option value="">Any category</option>
-            {{#each this.categories as |category|}}
-              <option value={{category.id}}>{{category.name}}</option>
-            {{/each}}
           </select>
         </label>
         <label>

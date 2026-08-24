@@ -38,7 +38,6 @@ module ::MashReviewDashboard
                  has_more: page * per_page < total
                },
                staff: staff_users,
-               categories: categories,
                migration: migration_state
              }
     end
@@ -197,7 +196,6 @@ module ::MashReviewDashboard
       ].present?
       scope = filter_moderator(scope)
       scope = filter_author(scope)
-      scope = filter_category(scope)
       scope = filter_dates(scope)
       scope
     end
@@ -239,14 +237,6 @@ module ::MashReviewDashboard
       user_ids =
         User.where("username_lower LIKE ?", "%#{username_query}%").select(:id)
       scope.where(author_id: user_ids)
-    end
-
-    def filter_category(scope)
-      return scope if params[:category_id].blank?
-
-      scope.where(
-        topic_id: Topic.where(category_id: params[:category_id]).select(:id)
-      )
     end
 
     def filter_dates(scope)
@@ -303,18 +293,6 @@ module ::MashReviewDashboard
         .where(active: true, staged: false)
         .order(:username_lower)
         .map { |user| user_json(user) }
-    end
-
-    def categories
-      Category
-        .where(
-          "NOT read_restricted OR id IN (:secure_category_ids)",
-          secure_category_ids: guardian.secure_category_ids
-        )
-        .order(:name)
-        .map do |category|
-          { id: category.id, name: category.name, color: category.color }
-        end
     end
 
     def migration_state

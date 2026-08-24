@@ -2,7 +2,7 @@
 
 # name: mash-review-dashboard
 # about: A permanent, backend-backed moderator review dashboard for topics and replies.
-# version: 1.1.0
+# version: 1.1.1
 # authors: MASH Platform
 # url: https://github.com/pushpinder6805/Mod-dashboard-3.0
 # required_version: 3.3.0
