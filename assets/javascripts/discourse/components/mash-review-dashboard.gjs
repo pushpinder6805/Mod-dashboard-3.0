@@ -40,9 +40,15 @@ export default class MashReviewDashboard extends Component {
   @tracked pagination = { page: 1, total: 0, has_more: false };
   @tracked details;
   @tracked detailsLoading = false;
+  @tracked detailsItemId;
   @tracked noteDraft = "";
   @tracked localMetadataCount = 0;
   @tracked editingNoteDraft = "";
+
+  detailsRequest = 0;
+
+  isDetailsFor = (item) =>
+    this.detailsItemId === item.id && (this.detailsLoading || this.details);
 
   constructor() {
     super(...arguments);
@@ -364,9 +370,15 @@ export default class MashReviewDashboard extends Component {
 
   @action
   async openDetails(item) {
+    const request = ++this.detailsRequest;
+    this.detailsItemId = item.id;
+    this.details = null;
     this.detailsLoading = true;
     try {
       const details = await ajax(`${BASE_URL}/items/${item.id}`);
+      if (request !== this.detailsRequest) {
+        return;
+      }
       details.notes = details.notes.map((note) => ({
         ...note,
         editing: false,
@@ -374,14 +386,21 @@ export default class MashReviewDashboard extends Component {
       this.details = details;
       this.noteDraft = "";
     } catch (error) {
-      popupAjaxError(error);
+      if (request === this.detailsRequest) {
+        popupAjaxError(error);
+      }
     } finally {
-      this.detailsLoading = false;
+      if (request === this.detailsRequest) {
+        this.detailsLoading = false;
+      }
     }
   }
 
   @action
   closeDetails() {
+    this.detailsRequest++;
+    this.detailsItemId = null;
+    this.detailsLoading = false;
     this.details = null;
     this.noteDraft = "";
   }
@@ -877,6 +896,105 @@ export default class MashReviewDashboard extends Component {
                   Notes & history ({{item.notes_count}})
                 </button>
               </div>
+              {{#if (this.isDetailsFor item)}}
+                {{#if this.detailsLoading}}
+                  <div class="mash-review-dashboard__details">Loading notes and
+                    history…</div>
+                {{else if this.details}}
+                  <aside class="mash-review-dashboard__details">
+                    <header>
+                      <div>
+                        <span>Staff-only details</span>
+                        <h3>{{this.details.item.title}}</h3>
+                      </div>
+                      <button
+                        type="button"
+                        class="btn btn-flat"
+                        {{on "click" this.closeDetails}}
+                      >Close</button>
+                    </header>
+
+                    <form
+                      class="mash-review-dashboard__note-form"
+                      {{on "submit" this.addNote}}
+                    >
+                      <label for="mash-review-note">Add an internal moderator
+                        note</label>
+                      <textarea
+                        id="mash-review-note"
+                        value={{this.noteDraft}}
+                        rows="3"
+                        {{on "input" this.updateNoteDraft}}
+                      ></textarea>
+                      <button
+                        type="submit"
+                        class="btn btn-primary"
+                        disabled={{this.saving}}
+                      >Add note</button>
+                    </form>
+
+                    <section>
+                      <h4>Internal notes</h4>
+                      {{#each this.details.notes as |note|}}
+                        <article class="mash-review-note">
+                          {{#if note.editing}}
+                            <textarea
+                              value={{this.editingNoteDraft}}
+                              rows="3"
+                              {{on "input" this.updateEditingNoteDraft}}
+                            ></textarea>
+                            <footer>
+                              <button
+                                type="button"
+                                class="btn btn-primary btn-small"
+                                {{on "click" (fn this.saveNote note)}}
+                              >Save</button>
+                              <button
+                                type="button"
+                                class="btn btn-default btn-small"
+                                {{on "click" this.cancelEditNote}}
+                              >Cancel</button>
+                            </footer>
+                          {{else}}
+                            <p>{{note.content}}</p>
+                            <footer>
+                              @{{note.created_by.username}}
+                              ·
+                              {{this.formatDate note.created_at}}
+                              <button
+                                type="button"
+                                class="btn btn-small"
+                                {{on "click" (fn this.beginEditNote note)}}
+                              >Edit</button>
+                            </footer>
+                          {{/if}}
+                        </article>
+                      {{else}}
+                        <p>No internal notes yet.</p>
+                      {{/each}}
+                    </section>
+
+                    <section>
+                      <h4>Audit history</h4>
+                      <ol class="mash-review-history">
+                        {{#each this.details.events as |event|}}
+                          <li>
+                            <strong>{{this.eventLabel event}}</strong>
+                            {{#if event.actor}}
+                              by @{{event.actor.username}}{{/if}}
+                            ·
+                            {{this.formatDate event.created_at}}
+                            {{#if event.reason}}<div
+                              >{{event.reason}}</div>{{/if}}
+                          </li>
+                        {{else}}
+                          <li>No recorded events.</li>
+                        {{/each}}
+                      </ol>
+                    </section>
+                  </aside>
+                {{/if}}
+              {{/if}}
             </article>
           {{/each}}
         </div>
@@ -909,99 +1027,6 @@ export default class MashReviewDashboard extends Component {
           filters.</div>
       {{/if}}
 
-      {{#if this.detailsLoading}}
-        <div class="mash-review-dashboard__details">Loading notes and history…</div>
-      {{else if this.details}}
-        <aside class="mash-review-dashboard__details">
-          <header>
-            <div>
-              <span>Staff-only details</span>
-              <h3>{{this.details.item.title}}</h3>
-            </div>
-            <button
-              type="button"
-              class="btn btn-flat"
-              {{on "click" this.closeDetails}}
-            >Close</button>
-          </header>
-
-          <form
-            class="mash-review-dashboard__note-form"
-            {{on "submit" this.addNote}}
-          >
-            <label for="mash-review-note">Add an internal moderator note</label>
-            <textarea
-              id="mash-review-note"
-              value={{this.noteDraft}}
-              rows="3"
-              {{on "input" this.updateNoteDraft}}
-            ></textarea>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              disabled={{this.saving}}
-            >Add note</button>
-          </form>
-
-          <section>
-            <h4>Internal notes</h4>
-            {{#each this.details.notes as |note|}}
-              <article class="mash-review-note">
-                {{#if note.editing}}
-                  <textarea
-                    value={{this.editingNoteDraft}}
-                    rows="3"
-                    {{on "input" this.updateEditingNoteDraft}}
-                  ></textarea>
-                  <footer>
-                    <button
-                      type="button"
-                      class="btn btn-primary btn-small"
-                      {{on "click" (fn this.saveNote note)}}
-                    >Save</button>
-                    <button
-                      type="button"
-                      class="btn btn-default btn-small"
-                      {{on "click" this.cancelEditNote}}
-                    >Cancel</button>
-                  </footer>
-                {{else}}
-                  <p>{{note.content}}</p>
-                  <footer>
-                    @{{note.created_by.username}}
-                    ·
-                    {{this.formatDate note.created_at}}
-                    <button
-                      type="button"
-                      class="btn btn-small"
-                      {{on "click" (fn this.beginEditNote note)}}
-                    >Edit</button>
-                  </footer>
-                {{/if}}
-              </article>
-            {{else}}
-              <p>No internal notes yet.</p>
-            {{/each}}
-          </section>
-
-          <section>
-            <h4>Audit history</h4>
-            <ol class="mash-review-history">
-              {{#each this.details.events as |event|}}
-                <li>
-                  <strong>{{this.eventLabel event}}</strong>
-                  {{#if event.actor}} by @{{event.actor.username}}{{/if}}
-                  ·
-                  {{this.formatDate event.created_at}}
-                  {{#if event.reason}}<div>{{event.reason}}</div>{{/if}}
-                </li>
-              {{else}}
-                <li>No recorded events.</li>
-              {{/each}}
-            </ol>
-          </section>
-        </aside>
-      {{/if}}
     </section>
   </template>
 }
