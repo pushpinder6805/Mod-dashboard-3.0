@@ -241,10 +241,17 @@ module ::MashReviewDashboard
     end
 
     def filter_tags(scope)
-      tag_names = params[:tags].to_s.split(",").map { |name| name.strip.downcase }.reject(&:blank?).uniq
+      tag_names =
+        params[:tags].to_s.split(",").map do |name|
+          name.downcase.gsub(/[-_[:space:]]+/, " ").strip
+        end.reject(&:blank?).uniq
       return scope if tag_names.empty?
 
-      topic_ids = Topic.joins(:tags).where("LOWER(tags.name) IN (?)", tag_names).select(:id)
+      topic_ids =
+        Topic.joins(:tags).where(
+          "TRIM(REGEXP_REPLACE(LOWER(tags.name), '[-_[:space:]]+', ' ', 'g')) IN (?)",
+          tag_names
+        ).select(:id)
       scope.where(topic_id: topic_ids)
     end
 

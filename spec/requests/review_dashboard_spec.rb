@@ -62,6 +62,44 @@ describe MashReviewDashboard::ItemsController do
       )
     end
 
+    it "matches display tag names with spaces, hyphens, or underscores" do
+      SiteSetting.tagging_enabled = true
+      topic.tags = [
+        Fabricate(:tag, name: "new-york"),
+        Fabricate(:tag, name: "district_of_columbia")
+      ]
+      topic_item = MashReviewDashboard::CapturePost.call(post: first_post)
+      reply_item = MashReviewDashboard::CapturePost.call(
+        post: Fabricate(:post, topic: topic, user: user)
+      )
+      MashReviewDashboard::CapturePost.call(post: Fabricate(:post))
+      sign_in(moderator)
+
+      [
+        "New York",
+        "new_york",
+        "NEW-YORK",
+        "  New   York  ",
+        "District Of Columbia",
+        "district-of-columbia",
+        "district_of_columbia",
+        "New York, District Of Columbia"
+      ].each do |tags|
+        get "/mash-review-dashboard/items.json", params: { tags: tags }
+
+        expect(response.status).to eq(200)
+        expect(response.parsed_body["items"].pluck("id")).to contain_exactly(
+          topic_item.id, reply_item.id
+        )
+        expect(response.parsed_body.dig("pagination", "total")).to eq(2)
+        expect(response.parsed_body.dig("counts", "pending")).to eq(2)
+      end
+
+      get "/mash-review-dashboard/items.json", params: { tags: "New" }
+
+      expect(response.parsed_body["items"]).to eq([])
+    end
+
     it "returns permanent topic and reply records to staff" do
       topic_item = MashReviewDashboard::CapturePost.call(post: first_post)
       reply = Fabricate(:post, topic: topic, user: user)
