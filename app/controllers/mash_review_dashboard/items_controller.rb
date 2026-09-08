@@ -196,6 +196,7 @@ module ::MashReviewDashboard
       ].present?
       scope = filter_moderator(scope)
       scope = filter_author(scope)
+      scope = filter_tags(scope)
       scope = filter_dates(scope)
       scope
     end
@@ -237,6 +238,14 @@ module ::MashReviewDashboard
       user_ids =
         User.where("username_lower LIKE ?", "%#{username_query}%").select(:id)
       scope.where(author_id: user_ids)
+    end
+
+    def filter_tags(scope)
+      tag_names = params[:tags].to_s.split(",").map { |name| name.strip.downcase }.reject(&:blank?).uniq
+      return scope if tag_names.empty?
+
+      topic_ids = Topic.joins(:tags).where("LOWER(tags.name) IN (?)", tag_names).select(:id)
+      scope.where(topic_id: topic_ids)
     end
 
     def filter_dates(scope)

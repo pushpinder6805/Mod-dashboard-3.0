@@ -24,6 +24,44 @@ describe MashReviewDashboard::ItemsController do
       expect(response.status).to eq(403)
     end
 
+    it "filters by topic tags without duplicating items or counts" do
+      SiteSetting.tagging_enabled = true
+      topic.tags = [Fabricate(:tag, name: "news"), Fabricate(:tag, name: "updates")]
+      topic_item = MashReviewDashboard::CapturePost.call(post: first_post)
+      reply_item = MashReviewDashboard::CapturePost.call(
+        post: Fabricate(:post, topic: topic, user: user)
+      )
+      other_item = MashReviewDashboard::CapturePost.call(post: Fabricate(:post))
+      sign_in(moderator)
+
+      get "/mash-review-dashboard/items.json",
+          params: { tags: " NEWS, updates, news ", status: "pending" }
+
+      expect(response.status).to eq(200)
+      expect(response.parsed_body["items"].pluck("id")).to contain_exactly(
+        topic_item.id, reply_item.id
+      )
+      expect(response.parsed_body.dig("pagination", "total")).to eq(2)
+      expect(response.parsed_body.dig("counts", "pending")).to eq(2)
+
+      get "/mash-review-dashboard/items.json",
+          params: { tags: "news", target_type: "post" }
+
+      expect(response.parsed_body["items"].pluck("id")).to eq([reply_item.id])
+      expect(response.parsed_body.dig("counts", "pending_topics")).to eq(1)
+
+      get "/mash-review-dashboard/items.json", params: { tags: "missing-tag" }
+
+      expect(response.parsed_body["items"]).to eq([])
+      expect(response.parsed_body.dig("pagination", "total")).to eq(0)
+
+      get "/mash-review-dashboard/items.json", params: { tags: " , " }
+
+      expect(response.parsed_body["items"].pluck("id")).to contain_exactly(
+        topic_item.id, reply_item.id, other_item.id
+      )
+    end
+
     it "returns permanent topic and reply records to staff" do
       topic_item = MashReviewDashboard::CapturePost.call(post: first_post)
       reply = Fabricate(:post, topic: topic, user: user)

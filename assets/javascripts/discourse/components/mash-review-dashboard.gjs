@@ -33,6 +33,7 @@ export default class MashReviewDashboard extends Component {
   @tracked status = "pending";
   @tracked targetType = "topic";
   @tracked author = "";
+  @tracked tags = "";
   @tracked dateFrom = "";
   @tracked dateTo = "";
   @tracked page = 1;
@@ -140,6 +141,9 @@ export default class MashReviewDashboard extends Component {
     if (this.author) {
       query.set("author", this.author);
     }
+    if (this.tags.trim()) {
+      query.set("tags", this.tags.trim());
+    }
     if (this.dateFrom) {
       query.set("date_from", this.dateFrom);
     }
@@ -204,6 +208,11 @@ export default class MashReviewDashboard extends Component {
   }
 
   @action
+  updateTags(event) {
+    this.tags = event.target.value;
+  }
+
+  @action
   updateDateFrom(event) {
     this.dateFrom = event.target.value;
   }
@@ -224,6 +233,7 @@ export default class MashReviewDashboard extends Component {
   @action
   clearFilters() {
     this.author = "";
+    this.tags = "";
     this.dateFrom = "";
     this.dateTo = "";
     this.page = 1;
@@ -676,6 +686,16 @@ export default class MashReviewDashboard extends Component {
             value={{this.author}}
             placeholder="Username"
             {{on "input" this.updateAuthor}}
+          />
+        </label>
+        <label>
+          Tags
+          <input
+            type="search"
+            value={{this.tags}}
+            placeholder="Tag names, separated by commas"
+            title="Match any of these topic tags"
+            {{on "input" this.updateTags}}
           />
         </label>
         <label>
